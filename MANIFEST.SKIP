@@ -1,0 +1,10 @@
+^POSIX\.(?:bs|c|o)$
+pm_to_blib$
+^blib/
+^Makefile(?:\.old)?$
+\.bak$
+^TRE\.[co]$
+\.bs$
+\.o$
+Makefile$
+\.old$
