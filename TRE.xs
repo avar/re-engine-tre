@@ -125,8 +125,14 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     offs = stringarg - strbeg;
 
     for (i = 0; i < parens; i++) {
-        rx->offs[i].start = matches[i].rm_so + offs;
-        rx->offs[i].end   = matches[i].rm_eo + offs;
+        if (matches[i].rm_eo == -1) {
+            rx->offs[i].start = -1;
+            rx->offs[i].end   = -1;
+        } else {
+            rx->lastparen = i;
+            rx->offs[i].start = matches[i].rm_so + offs;
+            rx->offs[i].end   = matches[i].rm_eo + offs;
+        }
     }
 
     Safefree(matches);
