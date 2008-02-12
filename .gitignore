@@ -1,0 +1,6 @@
+*.bs
+*.o
+Makefile
+TRE.c
+blib
+pm_to_blib
