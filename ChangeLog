@@ -1,4 +1,4 @@
-2008-02-18  Ævar Arnfjörð Bjarmason  <avar@cpan.org>
+2008-02-18  Ævar Arnfjörð Bjarmason  <avar@cpan.org> (0.03)
 
 	* Makefile.PL: Linked to -lpcre removed (kill/yank code in 0.02)
 
