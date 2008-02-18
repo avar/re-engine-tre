@@ -7,7 +7,6 @@ WriteMakefile(
     VERSION_FROM  => 'TRE.pm',
     ABSTRACT_FROM => 'TRE.pm',
     LICENSE       => 'perl',
-    LIBS          => [ '-lpcre' ],
     DIR           => [ 'tre' ],
     INC           => '-Itre',
     LDDLFLAGS     => '-shared tre/*.o',
