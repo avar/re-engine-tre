@@ -20,7 +20,9 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
     /* pregcomp vars */
     int cflags = 0;
     int err;
-    char *err_str;
+#define ERR_STR_LENGTH 512
+    char err_str[ERR_STR_LENGTH];
+    size_t err_str_length;
 
     /* C<split " ">, bypass the engine alltogether and act as perl does */
     if (flags & RXf_SPLIT && plen == 1 && exp[0] == ' ')
@@ -69,10 +71,15 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
     err = regncomp(re, exp, plen, cflags);
 
     if (err != 0) {
-        err_str = get_regerror(err, re);
-        free(err_str);
-        regfree(re);
-        croak("error compiling %s: %s", exp, err_str);
+        err_str_length = regerror(err, re, NULL, 0);
+
+        if (err_str_length > ERR_STR_LENGTH) {
+            croak("I don't have a static buffer for an error message of size %d", err_str_length);
+        } else {
+            (void)regerror(err, re, err_str, ERR_STR_LENGTH);
+            regfree(re);
+            croak("error compiling %s: %s", exp, err_str);
+        }
     }
 
     /* Save for later */
