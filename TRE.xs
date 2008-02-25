@@ -71,14 +71,12 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
     err = regncomp(re, exp, plen, cflags);
 
     if (err != 0) {
-        err_str_length = regerror(err, re, NULL, 0);
-
+        /* note: we do not call regfree() when regncomp returns an error */
+        err_str_length = regerror(err, re, err_str, ERR_STR_LENGTH);
         if (err_str_length > ERR_STR_LENGTH) {
-            croak("I don't have a static buffer for an error message of size %d", err_str_length);
+            croak("error compiling `%s': %s (error message truncated)", exp, err_str);
         } else {
-            (void)regerror(err, re, err_str, ERR_STR_LENGTH);
-            regfree(re);
-            croak("error compiling %s: %s", exp, err_str);
+            croak("error compiling `%s': %s", exp, err_str);
         }
     }
 
@@ -189,15 +187,6 @@ TRE_package(pTHX_ REGEXP * const rx)
 {
     PERL_UNUSED_ARG(rx);
     return newSVpvs("re::engine::TRE");
-}
-
-/* From *info* (libc) 10.3.6 TRE Regexp Matching Cleanup */
-char *get_regerror (int errcode, regex_t *compiled)
-{
-    size_t length = regerror (errcode, compiled, NULL, 0);
-    char *buffer = malloc (length);
-    (void) regerror (errcode, compiled, buffer, length);
-    return buffer;
 }
 
 MODULE = re::engine::TRE PACKAGE = re::engine::TRE
