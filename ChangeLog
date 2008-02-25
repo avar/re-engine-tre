@@ -1,3 +1,9 @@
+2008-02-25  Ævar Arnfjörð Bjarmason  <avar@cpan.org> (0.04)
+
+	* TRE.xs: Always display an error message even if it's longer than
+	ERR_STR_LENGTH, patch from b_jonas
+	* t/pragma.t: Pragma tests, patch from b_jonas
+
 2008-02-18  Ævar Arnfjörð Bjarmason  <avar@cpan.org> (0.03)
 
 	* Makefile.PL: Linked to -lpcre removed (kill/yank code in 0.02)
