@@ -6,11 +6,18 @@
 
 #include "TRE.h"
 
+#if PERL_VERSION > 10
+#define RegSV(p) SvANY(p)
+#else
+#define RegSV(p) (p)
+#endif
+
 REGEXP *
 TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
 {
     REGEXP  *rx;
-    regex_t *re;
+    regexp  *re;
+    regex_t *ri;
 
     STRLEN plen;
     char  *exp = SvPV((SV*)pattern, plen);
@@ -37,19 +44,34 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
         extflags |= RXf_WHITE;
 
     /* REGEX structure for perl */
+#if PERL_VERSION > 10
+    rx = (REGEXP*) newSV_type(SVt_REGEXP);
+#else
     Newxz(rx, 1, REGEXP);
-
     rx->refcnt = 1;
-    rx->extflags = extflags;
-    rx->engine = &engine_tre;
+#endif
+
+    re = RegSV(rx);
+    re->extflags = extflags;
+    re->engine = &engine_tre;
 
     /* Precompiled regexp for pp_regcomp to use */
+#if PERL_VERSION == 10
     rx->prelen = (I32)plen;
     rx->precomp = SAVEPVN(exp, rx->prelen);
+#endif
 
     /* qr// stringification, reuse the space */
+#if PERL_VERSION == 10
     rx->wraplen = rx->prelen;
     rx->wrapped = (char *)rx->precomp; /* from const char* */
+#else
+    SV * wrapped = newSVpvn("(?", 2), * wrapped_unset = newSVpvn("", 0);
+    sv_2mortal(wrapped);
+    RX_WRAPPED(rx) = savepvn(SvPVX(wrapped), SvCUR(wrapped));
+    RX_WRAPLEN(rx) = SvCUR(wrapped);
+    //Perl_sv_dump(rx);
+#endif
 
     /* Catch invalid modifiers, the rest of the flags are ignored */
     if (flags & (RXf_PMf_SINGLELINE|RXf_PMf_KEEPCOPY))
@@ -66,13 +88,13 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
     if (flags & PMf_FOLD) /* /i */
         cflags |= REG_ICASE;
 
-    Newxz(re, 1, regex_t);
+    Newxz(ri, 1, regex_t);
 
-    err = regncomp(re, exp, plen, cflags);
+    err = regncomp(ri, exp, plen, cflags);
 
     if (err != 0) {
         /* note: we do not call regfree() when regncomp returns an error */
-        err_str_length = regerror(err, re, err_str, ERR_STR_LENGTH);
+        err_str_length = regerror(err, ri, err_str, ERR_STR_LENGTH);
         if (err_str_length > ERR_STR_LENGTH) {
             croak("error compiling `%s': %s (error message truncated)", exp, err_str);
         } else {
@@ -81,14 +103,14 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
     }
 
     /* Save for later */
-    rx->pprivate = re;
+    re->pprivate = ri;
 
     /*
       Tell perl how many match vars we have and allocate space for
       them, at least one is always allocated for $&
      */
-    rx->nparens = (U32)re->re_nsub; /* cast from size_t */
-    Newxz(rx->offs, rx->nparens + 1, regexp_paren_pair);
+    re->nparens = (U32)ri->re_nsub; /* cast from size_t */
+    Newxz(re->offs, re->nparens + 1, regexp_paren_pair);
 
     /* return the regexp structure to perl */
     return rx;
@@ -99,7 +121,8 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
            char *strbeg, I32 minend, SV * sv,
            void *data, U32 flags)
 {
-    regex_t *re;
+    regex_t *ri;
+    regexp *re = RegSV(rx);
     regmatch_t *matches;
     regoff_t offs;
     size_t parens;
@@ -107,12 +130,12 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     char *err_msg;
     int i;
 
-    re = rx->pprivate;
-    parens = (size_t)rx->nparens + 1;
+    ri = re->pprivate;
+    parens = (size_t)re->nparens + 1;
 
     Newxz(matches, parens, regmatch_t);
 
-    err = regnexec(re, stringarg, strend - stringarg, parens, matches, 0);
+    err = regnexec(ri, stringarg, strend - stringarg, parens, matches, 0);
 
     if (err != 0) {
         assert(err == REG_NOMATCH);
@@ -120,8 +143,8 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
         return 0;
     }
 
-    rx->subbeg = strbeg;
-    rx->sublen = strend - strbeg;
+    re->subbeg = strbeg;
+    re->sublen = strend - strbeg;
 
     /*
       regexec returns offsets from the start of `stringarg' but perl expects
@@ -131,12 +154,12 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
 
     for (i = 0; i < parens; i++) {
         if (matches[i].rm_eo == -1) {
-            rx->offs[i].start = -1;
-            rx->offs[i].end   = -1;
+            re->offs[i].start = -1;
+            re->offs[i].end   = -1;
         } else {
-            rx->lastparen = i;
-            rx->offs[i].start = matches[i].rm_so + offs;
-            rx->offs[i].end   = matches[i].rm_eo + offs;
+            re->lastparen = i;
+            re->offs[i].start = matches[i].rm_so + offs;
+            re->offs[i].end   = matches[i].rm_eo + offs;
         }
     }
 
@@ -170,15 +193,16 @@ void
 TRE_free(pTHX_ REGEXP * const rx)
 {
 #define regfree(rx) tre_free(rx)
-    regfree(rx->pprivate);
+    regexp *re = RegSV(rx);
+    regfree(re->pprivate);
 }
 
 void *
 TRE_dupe(pTHX_ REGEXP * const rx, CLONE_PARAMS *param)
 {
     PERL_UNUSED_ARG(param);
-    regex_t *re;
-    Copy(rx->pprivate, re, 1, regex_t);
+    regexp *re = RegSV(rx);
+    Copy(re->pprivate, re, 1, regexp);
     return re;
 }
 
