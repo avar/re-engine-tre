@@ -16,7 +16,6 @@ TRE.h
 TRE.pm
 TRE.xs
 tre/config.h
-tre/gettext.h
 tre/LICENSE
 tre/Makefile.PL
 tre/regcomp.c
@@ -29,6 +28,7 @@ tre/tre-compile.c
 tre/tre-compile.h
 tre/tre-config.h
 tre/tre-internal.h
+tre/tre-match-approx.c
 tre/tre-match-backtrack.c
 tre/tre-match-parallel.c
 tre/tre-match-utils.h
@@ -38,5 +38,6 @@ tre/tre-parse.c
 tre/tre-parse.h
 tre/tre-stack.c
 tre/tre-stack.h
+tre/tre.h
 tre/xmalloc.c
 tre/xmalloc.h
