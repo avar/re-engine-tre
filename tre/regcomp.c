@@ -1,21 +1,8 @@
 /*
-  regcomp.c - TRE POSIX compatible regex compilation functions.
+  tre_regcomp.c - TRE POSIX compatible regex compilation functions.
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -27,17 +14,17 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include "regex.h"
+#include "tre.h"
 #include "tre-internal.h"
 #include "xmalloc.h"
 
 int
-regncomp(regex_t *preg, const char *regex, size_t n, int cflags)
+tre_regncomp(regex_t *preg, const char *regex, size_t n, int cflags)
 {
   int ret;
 #if TRE_WCHAR
   tre_char_t *wregex;
-  int wlen;
+  size_t wlen;
 
   wregex = xmalloc(sizeof(tre_char_t) * (n + 1));
   if (wregex == NULL)
@@ -53,7 +40,7 @@ regncomp(regex_t *preg, const char *regex, size_t n, int cflags)
 #endif /* TRE_MULTIBYTE */
     {
       unsigned int i;
-      const unsigned char *str = (unsigned char *)regex;
+      const unsigned char *str = (const unsigned char *)regex;
       tre_char_t *wstr = wregex;
 
       for (i = 0; i < n; i++)
@@ -113,28 +100,28 @@ regncomp(regex_t *preg, const char *regex, size_t n, int cflags)
 }
 
 int
-regcomp(regex_t *preg, const char *regex, int cflags)
+tre_regcomp(regex_t *preg, const char *regex, int cflags)
 {
-  return regncomp(preg, regex, regex ? strlen(regex) : 0, cflags);
+  return tre_regncomp(preg, regex, regex ? strlen(regex) : 0, cflags);
 }
 
 
 #ifdef TRE_WCHAR
 int
-regwncomp(regex_t *preg, const wchar_t *regex, size_t n, int cflags)
+tre_regwncomp(regex_t *preg, const wchar_t *regex, size_t n, int cflags)
 {
   return tre_compile(preg, regex, n, cflags);
 }
 
 int
-regwcomp(regex_t *preg, const wchar_t *regex, int cflags)
+tre_regwcomp(regex_t *preg, const wchar_t *regex, int cflags)
 {
   return tre_compile(preg, regex, regex ? wcslen(regex) : 0, cflags);
 }
 #endif /* TRE_WCHAR */
 
 void
-regfree(regex_t *preg)
+tre_regfree(regex_t *preg)
 {
   tre_free(preg);
 }

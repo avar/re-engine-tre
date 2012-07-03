@@ -42,13 +42,13 @@
 /* Define to 1 if you have the <getopt.h> header file. */
 #define HAVE_GETOPT_H 1
 
-/* Define to 1 if you have the `getopt_long_only' function. */
-#define HAVE_GETOPT_LONG_ONLY 1
+/* Define to 1 if you have the `getopt_long' function. */
+#define HAVE_GETOPT_LONG 1
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
 #define HAVE_GETTEXT 1
 
-/* Define if you have the iconv() function. */
+/* Define if you have the iconv() function and it works. */
 /* #undef HAVE_ICONV */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
@@ -169,13 +169,13 @@
 #define PACKAGE_NAME "TRE"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "TRE 0.7.5"
+#define PACKAGE_STRING "TRE 0.8.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "tre"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "0.7.5"
+#define PACKAGE_VERSION "0.8.0"
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -212,22 +212,22 @@
 /* #undef TRE_USE_SYSTEM_REGEX_H */
 
 /* TRE version string. */
-#define TRE_VERSION "0.7.5"
+#define TRE_VERSION "0.8.0"
 
 /* TRE version level 1. */
 #define TRE_VERSION_1 0
 
 /* TRE version level 2. */
-#define TRE_VERSION_2 7
+#define TRE_VERSION_2 8
 
 /* TRE version level 3. */
-#define TRE_VERSION_3 5
+#define TRE_VERSION_3 0
 
 /* Define to enable wide character (wchar_t) support. */
 #define TRE_WCHAR 1
 
 /* Version number of package */
-/*#define VERSION "0.7.5"*/
+/*#define VERSION "0.8.0"*/
 
 /* Define to the maximum value of wchar_t if not already defined elsewhere */
 /* #undef WCHAR_MAX */
@@ -249,10 +249,6 @@
 
 /* Define on IRIX */
 /* #undef _REGCOMP_INTERNAL */
-
-/* Define to rpl_ if the getopt replacement functions and variables should be
-   used. */
-/* #undef __GETOPT_PREFIX */
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */

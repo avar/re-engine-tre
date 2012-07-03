@@ -1,21 +1,8 @@
 /*
   tre-compile.c - TRE regex compiler
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -39,7 +26,7 @@
 #include "tre-ast.h"
 #include "tre-parse.h"
 #include "tre-compile.h"
-#include "regex.h"
+#include "tre.h"
 #include "xmalloc.h"
 
 /*
@@ -126,6 +113,30 @@ typedef struct {
   int tag;
   int next_tag;
 } tre_tag_states_t;
+
+
+/* Go through `regset' and set submatch data for submatches that are
+   using this tag. */
+static void
+tre_purge_regset(int *regset, tre_tnfa_t *tnfa, int tag)
+{
+  int i;
+
+  for (i = 0; regset[i] >= 0; i++)
+    {
+      int id = regset[i] / 2;
+      int start = !(regset[i] % 2);
+      DPRINT(("  Using tag %d for %s offset of "
+	      "submatch %d\n", tag,
+	      start ? "start" : "end", id));
+      if (start)
+	tnfa->submatch_data[id].so_tag = tag;
+      else
+	tnfa->submatch_data[id].eo_tag = tag;
+    }
+  regset[0] = -1;
+}
+
 
 /* Adds tags to appropriate locations in the parse tree in `tree', so that
    subexpressions marked for submatch addressing can be traced. */
@@ -281,20 +292,7 @@ tre_add_tags(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *tree,
 				minimal_tag = -1;
 				num_minimals++;
 			      }
-			    /* Go through the regset and set submatch data for
-			       submatches that are using this tag. */
-			    for (i = 0; regset[i] >= 0; i++)
-			      {
-				int id = regset[i] / 2;
-				int start = !(regset[i] % 2);
-				DPRINT(("  Using tag %d for %s offset of "
-					"submatch %d\n", tag,
-					start ? "start" : "end", id));
-				if (start)
-				  tnfa->submatch_data[id].so_tag = tag;
-				else
-				  tnfa->submatch_data[id].eo_tag = tag;
-			      }
+			    tre_purge_regset(regset, tnfa, tag);
 			  }
 			else
 			  {
@@ -394,20 +392,7 @@ tre_add_tags(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *tree,
 			    minimal_tag = -1;
 			    num_minimals++;
 			  }
-			/* Go through the regset and set submatch data for
-			   submatches that are using this tag. */
-			for (i = 0; regset[i] >= 0; i++)
-			  {
-			    int id = regset[i] / 2;
-			    int start = !(regset[i] % 2);
-			    DPRINT(("  Using tag %d for %s offset of "
-				    "submatch %d\n", tag,
-				    start ? "start" : "end", id));
-			    if (start)
-			      tnfa->submatch_data[id].so_tag = tag;
-			    else
-			      tnfa->submatch_data[id].eo_tag = tag;
-			  }
+			tre_purge_regset(regset, tnfa, tag);
 		      }
 
 		    DPRINT(("  num_tags++\n"));
@@ -479,20 +464,7 @@ tre_add_tags(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *tree,
 			    minimal_tag = -1;
 			    num_minimals++;
 			  }
-			/* Go through the regset and set submatch data for
-			   submatches that are using this tag. */
-			for (i = 0; regset[i] >= 0; i++)
-			  {
-			    int id = regset[i] / 2;
-			    int start = !(regset[i] % 2);
-			    DPRINT(("  Using tag %d for %s offset of "
-				    "submatch %d\n", tag,
-				    start ? "start" : "end", id));
-			    if (start)
-			      tnfa->submatch_data[id].so_tag = tag;
-			    else
-			      tnfa->submatch_data[id].eo_tag = tag;
-			  }
+			tre_purge_regset(regset, tnfa, tag);
 		      }
 
 		    DPRINT(("  num_tags++\n"));
@@ -640,23 +612,7 @@ tre_add_tags(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *tree,
     } /* end while(tre_stack_num_objects(stack) > bottom) */
 
   if (!first_pass)
-    {
-      int i;
-      /* Go through the regset and set submatch data for
-	 submatches that are using this tag. */
-      for (i = 0; regset[i] >= 0; i++)
-	{
-	  int id = regset[i] / 2;
-	  int start = !(regset[i] % 2);
-	  DPRINT(("  Using tag %d for %s offset of "
-		  "submatch %d\n", num_tags,
-		  start ? "start" : "end", id));
-	  if (start)
-	    tnfa->submatch_data[id].so_tag = num_tags;
-	  else
-	    tnfa->submatch_data[id].eo_tag = num_tags;
-	}
-    }
+    tre_purge_regset(regset, tnfa, tag);
 
   if (!first_pass && minimal_tag >= 0)
     {
@@ -940,15 +896,15 @@ tre_expand_ast(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *ast,
 	    if (iter->min > 1 || iter->max > 1)
 	      {
 		tre_ast_node_t *seq1 = NULL, *seq2 = NULL;
-		int i;
+		int j;
 		int pos_add_save = pos_add;
 
 		/* Create a catenated sequence of copies of the node. */
-		for (i = 0; i < iter->min; i++)
+		for (j = 0; j < iter->min; j++)
 		  {
 		    tre_ast_node_t *copy;
 		    /* Remove tags from all but the last copy. */
-		    int flags = ((i + 1 < iter->min)
+		    int flags = ((j + 1 < iter->min)
 				 ? COPY_REMOVE_TAGS
 				 : COPY_MAXIMIZE_FIRST_TAG);
 		    DPRINT(("  pos_add %d\n", pos_add));
@@ -980,7 +936,7 @@ tre_expand_ast(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *ast,
 		  }
 		else
 		  {
-		    for (i = iter->min; i < iter->max; i++)
+		    for (j = iter->min; j < iter->max; j++)
 		      {
 			tre_ast_node_t *tmp, *copy;
 			pos_add_save = pos_add;
@@ -1393,7 +1349,7 @@ tre_compute_nfl(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *tree)
 		      return REG_ESPACE;
 		    node->lastpos = tre_set_one(mem, lit->position, 0,
 						TRE_CHAR_MAX, 0, NULL,
-						lit->code_max);
+						(int)lit->code_max);
 		    if (!node->lastpos)
 		      return REG_ESPACE;
 		  }
@@ -1415,12 +1371,13 @@ tre_compute_nfl(tre_mem_t mem, tre_stack_t *stack, tre_ast_node_t *tree)
 		       lastpos = {i}. */
 		    node->nullable = 0;
 		    node->firstpos =
-		      tre_set_one(mem, lit->position, lit->code_min,
-				  lit->code_max, 0, NULL, -1);
+		      tre_set_one(mem, lit->position, (int)lit->code_min,
+				  (int)lit->code_max, 0, NULL, -1);
 		    if (!node->firstpos)
 		      return REG_ESPACE;
 		    node->lastpos = tre_set_one(mem, lit->position,
-						lit->code_min, lit->code_max,
+						(int)lit->code_min,
+						(int)lit->code_max,
 						lit->u.class, lit->neg_classes,
 						-1);
 		    if (!node->lastpos)
@@ -1888,9 +1845,10 @@ tre_ast_to_tnfa(tre_ast_node_t *node, tre_tnfa_transition_t *transitions,
   do				  \
     {				  \
       errcode = err;		  \
-      if (1) goto error_exit;	  \
+      if (/*CONSTCOND*/1)	  \
+      	goto error_exit;	  \
     }				  \
- while (0)
+ while (/*CONSTCOND*/0)
 
 
 int
@@ -1984,12 +1942,13 @@ tre_compile(regex_t *preg, const tre_char_t *regex, size_t n, int cflags)
 	  memset(tag_directions, -1,
 		 sizeof(*tag_directions) * (tnfa->num_tags + 1));
 	}
-      tnfa->minimal_tags = xcalloc(tnfa->num_tags * 2 + 1,
+      tnfa->minimal_tags = xcalloc((unsigned)tnfa->num_tags * 2 + 1,
 				   sizeof(tnfa->minimal_tags));
       if (tnfa->minimal_tags == NULL)
 	ERROR_EXIT(REG_ESPACE);
 
-      submatch_data = xcalloc(parse_ctx.submatch_id, sizeof(*submatch_data));
+      submatch_data = xcalloc((unsigned)parse_ctx.submatch_id,
+			      sizeof(*submatch_data));
       if (submatch_data == NULL)
 	ERROR_EXIT(REG_ESPACE);
       tnfa->submatch_data = submatch_data;
@@ -2056,7 +2015,7 @@ tre_compile(regex_t *preg, const tre_char_t *regex, size_t n, int cflags)
       add += counts[i] + 1;
       counts[i] = 0;
     }
-  transitions = xcalloc(add + 1, sizeof(*transitions));
+  transitions = xcalloc((unsigned)add + 1, sizeof(*transitions));
   if (transitions == NULL)
     ERROR_EXIT(REG_ESPACE);
   tnfa->transitions = transitions;
@@ -2073,7 +2032,7 @@ tre_compile(regex_t *preg, const tre_char_t *regex, size_t n, int cflags)
   if (TRE_MB_CUR_MAX == 1 && !tmp_ast_l->nullable)
     {
       int count = 0;
-      int k;
+      tre_cint_t k;
       DPRINT(("Characters that can start a match:"));
       tnfa->firstpos_chars = xcalloc(256, sizeof(char));
       if (tnfa->firstpos_chars == NULL)
@@ -2150,7 +2109,7 @@ tre_compile(regex_t *preg, const tre_char_t *regex, size_t n, int cflags)
       p++;
     }
 
-  initial = xcalloc(i + 1, sizeof(tre_tnfa_transition_t));
+  initial = xcalloc((unsigned)i + 1, sizeof(tre_tnfa_transition_t));
   if (initial == NULL)
     ERROR_EXIT(REG_ESPACE);
   tnfa->initial = initial;
@@ -2279,8 +2238,8 @@ tre_version(void)
 
   if (str[0] == 0)
     {
-      tre_config(TRE_CONFIG_VERSION, &version);
-      sprintf(str, "TRE %s (LGPL)", version);
+      (void) tre_config(TRE_CONFIG_VERSION, &version);
+      (void) snprintf(str, sizeof(str), "TRE %s (BSD)", version);
     }
   return str;
 }
@@ -2289,7 +2248,7 @@ int
 tre_config(int query, void *result)
 {
   int *int_result = result;
-  char **string_result = result;
+  const char **string_result = result;
 
   switch (query)
     {

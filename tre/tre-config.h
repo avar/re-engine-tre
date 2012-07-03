@@ -1,6 +1,6 @@
 /* lib/tre-config.h.  Generated from tre-config.h.in by configure.  */
 /* tre-config.h.in.  This file has all definitions that are needed in
-   `regex.h'.  Note that this file must contain only the bare minimum
+   `tre.h'.  Note that this file must contain only the bare minimum
    of definitions without the TRE_ prefix to avoid conflicts between
    definitions here and definitions included from somewhere else. */
 
@@ -17,28 +17,28 @@
 #define HAVE_WCHAR_H 1
 
 /* Define if you want to enable approximate matching functionality. */
-/* #undef TRE_APPROX */
+#define TRE_APPROX 1
 
 /* Define to enable multibyte character set support. */
 #define TRE_MULTIBYTE 1
 
-/* Define to the absolute path to the system regex.h */
+/* Define to the absolute path to the system tre.h */
 /* #undef TRE_SYSTEM_REGEX_H_PATH */
 
-/* Define to include the system regex.h from TRE regex.h */
+/* Define to include the system regex.h from tre.h */
 /* #undef TRE_USE_SYSTEM_REGEX_H */
 
 /* Define to enable wide character (wchar_t) support. */
 #define TRE_WCHAR 1
 
 /* TRE version string. */
-#define TRE_VERSION "0.7.5"
+#define TRE_VERSION "0.8.0"
 
 /* TRE version level 1. */
 #define TRE_VERSION_1 0
 
 /* TRE version level 2. */
-#define TRE_VERSION_2 7
+#define TRE_VERSION_2 8
 
 /* TRE version level 3. */
-#define TRE_VERSION_3 5
+#define TRE_VERSION_3 0

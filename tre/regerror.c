@@ -1,21 +1,8 @@
 /*
-  regerror.c - POSIX regerror() implementation for TRE.
+  tre_regerror.c - POSIX tre_regerror() implementation for TRE.
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -32,12 +19,19 @@
 #endif /* HAVE_WCTYPE_H */
 
 #include "tre-internal.h"
-#include "regex.h"
-#include "gettext.h"
+#include "tre.h"
+
+#ifdef HAVE_GETTEXT
+#include <libintl.h>
+#else
+#define dgettext(p, s) s
+#define gettext(s) s
+#endif
+
 #define _(String) dgettext(PACKAGE, String)
 #define gettext_noop(String) String
 
-/* Error message strings for error codes listed in `regex.h'.  This list
+/* Error message strings for error codes listed in `tre.h'.  This list
    needs to be in sync with the codes listed there, naturally. */
 static const char *tre_error_messages[] =
   { gettext_noop("No error"),				 /* REG_OK */
@@ -57,13 +51,15 @@ static const char *tre_error_messages[] =
   };
 
 size_t
-regerror(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size)
+tre_regerror(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size)
 {
   const char *err;
   size_t err_len;
 
+  /*LINTED*/(void)&preg;
   if (errcode >= 0
-      && errcode < (sizeof(tre_error_messages) / sizeof(*tre_error_messages)))
+      && errcode < (int)(sizeof(tre_error_messages)
+			 / sizeof(*tre_error_messages)))
     err = gettext(tre_error_messages[errcode]);
   else
     err = gettext("Unknown error");
