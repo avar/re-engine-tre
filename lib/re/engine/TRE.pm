@@ -22,6 +22,7 @@ use utf8;
 use warnings qw(all);
 
 use 5.009005;
+use Scalar::Util qw(looks_like_number);
 use XSLoader ();
 
 # All engines should subclass the core Regexp package
@@ -37,7 +38,27 @@ ENGINE
 =cut
 
 sub import {
+    shift;
+
     $^H{regcomp} = ENGINE;
+
+    if (@_) {
+        my %args = @_;
+        $^H{__PACKAGE__ . '::' . $_} = int($args{$_})
+            for grep {
+                exists $args{$_}
+                and looks_like_number($args{$_})
+            } qw(
+                cost_ins
+                cost_del
+                cost_subst
+                max_cost
+                max_ins
+                max_del
+                max_subst
+                max_err
+            );
+    }
 }
 
 sub unimport {

@@ -117,6 +117,21 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
 }
 
 I32
+get_hint(const char *key, I32 def)
+{
+#if PERL_VERSION > 10
+    SV *const val = Perl_refcounted_he_fetch_pv(PL_curcop->cop_hints_hash, key, 0, 0);
+#else
+    SV *const val = Perl_refcounted_he_fetch(PL_curcop->cop_hints_hash, NULL, key, strlen(key), 0, 0);
+#endif
+    if (SvOK(val) && SvIV_nomg(val)) {
+        return SvIV(val);
+    } else {
+        return def;
+    }
+}
+
+I32
 TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
            char *strbeg, I32 minend, SV * sv,
            void *data, U32 flags)
@@ -129,13 +144,29 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     int err;
     char *err_msg;
     int i;
+    regamatch_t *match;
+    regaparams_t params;
+
+    //tre_regaparams_default(&params);
+    params.cost_ins     = get_hint("re::engine::TRE::cost_ins",     1);
+    params.cost_del     = get_hint("re::engine::TRE::cost_del",     1);
+    params.cost_subst   = get_hint("re::engine::TRE::cost_subst",   1);
+    params.max_cost     = get_hint("re::engine::TRE::max_cost",     0);
+    params.max_ins      = get_hint("re::engine::TRE::max_ins",      INT_MAX);
+    params.max_del      = get_hint("re::engine::TRE::max_del",      INT_MAX);
+    params.max_subst    = get_hint("re::engine::TRE::max_subst",    INT_MAX);
+    params.max_err      = get_hint("re::engine::TRE::max_err",      INT_MAX);
 
     ri = re->pprivate;
     parens = (size_t)re->nparens + 1;
 
     Newxz(matches, parens, regmatch_t);
 
-    err = regnexec(ri, stringarg, strend - stringarg, parens, matches, 0);
+    Newxz(match, 1, regamatch_t);
+    match->nmatch = parens;
+    match->pmatch = matches;
+
+    err = reganexec(ri, stringarg, strend - stringarg, match, params, 0);
 
     if (err != 0) {
         assert(err == REG_NOMATCH);
@@ -164,6 +195,7 @@ TRE_exec(pTHX_ REGEXP * const rx, char *stringarg, char *strend,
     }
 
     Safefree(matches);
+    Safefree(match);
 
     /* known to have matched by this point (see error handling above */
     return 1;
