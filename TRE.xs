@@ -119,7 +119,7 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
 I32
 get_hint(const char *key, I32 def)
 {
-#if PERL_VERSION > 10
+#if PERL_VERSION > 12
     SV *const val = Perl_refcounted_he_fetch_pv(PL_curcop->cop_hints_hash, key, 0, 0);
 #else
     SV *const val = Perl_refcounted_he_fetch(PL_curcop->cop_hints_hash, NULL, key, strlen(key), 0, 0);
