@@ -13,7 +13,11 @@
 #endif
 
 REGEXP *
-TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
+TRE_comp(pTHX_
+#if PERL_VERSION == 10
+    const
+#endif
+    SV * const pattern, const U32 flags)
 {
     REGEXP  *rx;
     regexp  *re;
@@ -119,10 +123,10 @@ TRE_comp(pTHX_ const SV * const pattern, const U32 flags)
 I32
 get_hint(const char *key, I32 def)
 {
-#if PERL_VERSION > 12
-    SV *const val = Perl_refcounted_he_fetch_pv(PL_curcop->cop_hints_hash, key, 0, 0);
+#if ((PERL_VERSION >= 13) && (PERL_SUBVERSION >= 7)) || (PERL_VERSION >= 14)
+    SV *const val = cophh_fetch_pvn(PL_curcop->cop_hints_hash, key, strlen(key), 0, 0);
 #else
-    SV *const val = Perl_refcounted_he_fetch(PL_curcop->cop_hints_hash, NULL, key, strlen(key), 0, 0);
+    SV *const val = Perl_refcounted_he_fetch(aTHX_ PL_curcop->cop_hints_hash, Nullsv, key, strlen(key), 0, 0);
 #endif
     if (SvOK(val) && SvIV_nomg(val)) {
         return SvIV(val);
@@ -224,7 +228,6 @@ TRE_checkstr(pTHX_ REGEXP * const rx)
 void
 TRE_free(pTHX_ REGEXP * const rx)
 {
-#define regfree(rx) tre_free(rx)
     regexp *re = RegSV(rx);
     regfree(re->pprivate);
 }

@@ -2,7 +2,15 @@
 
 START_EXTERN_C
 EXTERN_C const regexp_engine engine_tre;
-EXTERN_C REGEXP * TRE_comp(pTHX_ const SV const *, const U32);
+
+EXTERN_C
+REGEXP *
+TRE_comp(pTHX_
+#if PERL_VERSION == 10
+    const
+#endif
+    SV * const, const U32);
+
 EXTERN_C I32      TRE_exec(pTHX_ REGEXP * const, char *, char *,
                            char *, I32, SV *, void *, U32);
 EXTERN_C char *   TRE_intuit(pTHX_ REGEXP * const, SV *, char *,
