@@ -2,6 +2,8 @@ use strict;
 use utf8;
 use warnings qw(all);
 
+no if ($] >= 5.017010), warnings => q(experimental);
+
 use Test::More tests => 8;
 
 open(my $fh, q(<), q(t/words));
