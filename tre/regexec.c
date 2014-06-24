@@ -1,21 +1,8 @@
 /*
-  regexec.c - TRE POSIX compatible matching functions (and more).
+  tre_regexec.c - TRE POSIX compatible matching functions (and more).
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -58,7 +45,7 @@ char *alloca ();
 #include <limits.h>
 
 #include "tre-internal.h"
-#include "regex.h"
+#include "tre.h"
 #include "xmalloc.h"
 
 
@@ -179,7 +166,7 @@ tre_match(const tre_tnfa_t *tnfa, const void *string, size_t len,
 	       capabilities from the input stream. */
 	    return REG_BADPAT;
 	}
-      status = tre_tnfa_run_backtrack(tnfa, string, len, type,
+      status = tre_tnfa_run_backtrack(tnfa, string, (int)len, type,
 				      tags, eflags, &eo);
     }
 #ifdef TRE_APPROX
@@ -188,17 +175,17 @@ tre_match(const tre_tnfa_t *tnfa, const void *string, size_t len,
       /* The regex uses approximate matching, use the approximate matcher. */
       regamatch_t match;
       regaparams_t params;
-      regaparams_default(&params);
+      tre_regaparams_default(&params);
       params.max_err = 0;
       params.max_cost = 0;
-      status = tre_tnfa_run_approx(tnfa, string, len, type, tags,
+      status = tre_tnfa_run_approx(tnfa, string, (int)len, type, tags,
 				   &match, params, eflags, &eo);
     }
 #endif /* TRE_APPROX */
   else
     {
       /* Exact matching, no back references, use the parallel matcher. */
-      status = tre_tnfa_run_parallel(tnfa, string, len, type,
+      status = tre_tnfa_run_parallel(tnfa, string, (int)len, type,
 				     tags, eflags, &eo);
     }
 
@@ -213,7 +200,7 @@ tre_match(const tre_tnfa_t *tnfa, const void *string, size_t len,
 }
 
 int
-regnexec(const regex_t *preg, const char *str, size_t len,
+tre_regnexec(const regex_t *preg, const char *str, size_t len,
 	 size_t nmatch, regmatch_t pmatch[], int eflags)
 {
   tre_tnfa_t *tnfa = (void *)preg->TRE_REGEX_T_FIELD;
@@ -223,17 +210,17 @@ regnexec(const regex_t *preg, const char *str, size_t len,
 }
 
 int
-regexec(const regex_t *preg, const char *str,
+tre_regexec(const regex_t *preg, const char *str,
 	size_t nmatch, regmatch_t pmatch[], int eflags)
 {
-  return regnexec(preg, str, -1, nmatch, pmatch, eflags);
+  return tre_regnexec(preg, str, (unsigned)-1, nmatch, pmatch, eflags);
 }
 
 
 #ifdef TRE_WCHAR
 
 int
-regwnexec(const regex_t *preg, const wchar_t *str, size_t len,
+tre_regwnexec(const regex_t *preg, const wchar_t *str, size_t len,
 	  size_t nmatch, regmatch_t pmatch[], int eflags)
 {
   tre_tnfa_t *tnfa = (void *)preg->TRE_REGEX_T_FIELD;
@@ -241,20 +228,20 @@ regwnexec(const regex_t *preg, const wchar_t *str, size_t len,
 }
 
 int
-regwexec(const regex_t *preg, const wchar_t *str,
+tre_regwexec(const regex_t *preg, const wchar_t *str,
 	 size_t nmatch, regmatch_t pmatch[], int eflags)
 {
-  return regwnexec(preg, str, -1, nmatch, pmatch, eflags);
+  return tre_regwnexec(preg, str, (unsigned)-1, nmatch, pmatch, eflags);
 }
 
 #endif /* TRE_WCHAR */
 
 int
-reguexec(const regex_t *preg, const tre_str_source *str,
+tre_reguexec(const regex_t *preg, const tre_str_source *str,
 	 size_t nmatch, regmatch_t pmatch[], int eflags)
 {
   tre_tnfa_t *tnfa = (void *)preg->TRE_REGEX_T_FIELD;
-  return tre_match(tnfa, str, -1, STR_USER, nmatch, pmatch, eflags);
+  return tre_match(tnfa, str, (unsigned)-1, STR_USER, nmatch, pmatch, eflags);
 }
 
 
@@ -294,7 +281,7 @@ tre_match_approx(const tre_tnfa_t *tnfa, const void *string, size_t len,
       if (tags == NULL)
 	return REG_ESPACE;
     }
-  status = tre_tnfa_run_approx(tnfa, string, len, type, tags,
+  status = tre_tnfa_run_approx(tnfa, string, (int)len, type, tags,
 			       match, params, eflags, &eo);
   if (status == REG_OK)
     tre_fill_pmatch(match->nmatch, match->pmatch, tnfa->cflags, tnfa, tags, eo);
@@ -306,7 +293,7 @@ tre_match_approx(const tre_tnfa_t *tnfa, const void *string, size_t len,
 }
 
 int
-reganexec(const regex_t *preg, const char *str, size_t len,
+tre_reganexec(const regex_t *preg, const char *str, size_t len,
 	  regamatch_t *match, regaparams_t params, int eflags)
 {
   tre_tnfa_t *tnfa = (void *)preg->TRE_REGEX_T_FIELD;
@@ -316,16 +303,16 @@ reganexec(const regex_t *preg, const char *str, size_t len,
 }
 
 int
-regaexec(const regex_t *preg, const char *str,
+tre_regaexec(const regex_t *preg, const char *str,
 	 regamatch_t *match, regaparams_t params, int eflags)
 {
-  return reganexec(preg, str, -1, match, params, eflags);
+  return tre_reganexec(preg, str, (unsigned)-1, match, params, eflags);
 }
 
 #ifdef TRE_WCHAR
 
 int
-regawnexec(const regex_t *preg, const wchar_t *str, size_t len,
+tre_regawnexec(const regex_t *preg, const wchar_t *str, size_t len,
 	   regamatch_t *match, regaparams_t params, int eflags)
 {
   tre_tnfa_t *tnfa = (void *)preg->TRE_REGEX_T_FIELD;
@@ -334,16 +321,16 @@ regawnexec(const regex_t *preg, const wchar_t *str, size_t len,
 }
 
 int
-regawexec(const regex_t *preg, const wchar_t *str,
+tre_regawexec(const regex_t *preg, const wchar_t *str,
 	  regamatch_t *match, regaparams_t params, int eflags)
 {
-  return regawnexec(preg, str, -1, match, params, eflags);
+  return tre_regawnexec(preg, str, (unsigned)-1, match, params, eflags);
 }
 
 #endif /* TRE_WCHAR */
 
 void
-regaparams_default(regaparams_t *params)
+tre_regaparams_default(regaparams_t *params)
 {
   memset(params, 0, sizeof(*params));
   params->cost_ins = 1;

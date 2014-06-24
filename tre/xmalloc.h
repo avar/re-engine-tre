@@ -1,27 +1,25 @@
 /*
   xmalloc.h - Simple malloc debugging library API
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
 #ifndef _XMALLOC_H
 #define _XMALLOC_H 1
 
+void *xmalloc_impl(size_t size, const char *file, int line, const char *func);
+void *xcalloc_impl(size_t nmemb, size_t size, const char *file, int line,
+		   const char *func);
+void xfree_impl(void *ptr, const char *file, int line, const char *func);
+void *xrealloc_impl(void *ptr, size_t new_size, const char *file, int line,
+		    const char *func);
+int xmalloc_dump_leaks(void);
+void xmalloc_configure(int fail_after);
+
+
+#ifndef XMALLOC_INTERNAL
 #ifdef MALLOC_DEBUGGING
 
 /* Version 2.4 and later of GCC define a magical variable `__PRETTY_FUNCTION__'
@@ -52,16 +50,6 @@
 #define xfree(ptr) xfree_impl(ptr, __FILE__, __LINE__, __XMALLOC_FUNCTION)
 #define xrealloc(ptr, new_size) xrealloc_impl(ptr, new_size, __FILE__, \
 					      __LINE__, __XMALLOC_FUNCTION)
-
-void *xmalloc_impl(size_t size, const char *file, int line, const char *func);
-void *xcalloc_impl(size_t nmemb, size_t size, const char *file, int line,
-		   const char *func);
-void xfree_impl(void *ptr, const char *file, int line, const char *func);
-void *xrealloc_impl(void *ptr, size_t new_size, const char *file, int line,
-		    const char *func);
-int xmalloc_dump_leaks(void);
-void xmalloc_configure(int fail_after);
-
 #undef malloc
 #undef calloc
 #undef free
@@ -82,6 +70,7 @@ void xmalloc_configure(int fail_after);
 #define xrealloc(ptr, new_size) realloc(ptr, new_size)
 
 #endif /* !MALLOC_DEBUGGING */
+#endif /* !XMALLOC_INTERNAL */
 
 #endif /* _XMALLOC_H */
 

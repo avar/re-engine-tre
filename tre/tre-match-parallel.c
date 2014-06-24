@@ -1,21 +1,8 @@
 /*
   tre-match-parallel.c - TRE parallel regex matching engine
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -75,7 +62,7 @@ char *alloca ();
 
 #include "tre-internal.h"
 #include "tre-match-utils.h"
-#include "regex.h"
+#include "tre.h"
 #include "xmalloc.h"
 
 
@@ -181,11 +168,11 @@ tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, int len,
 #ifdef TRE_USE_ALLOCA
     buf = alloca(total_bytes);
 #else /* !TRE_USE_ALLOCA */
-    buf = xmalloc(total_bytes);
+    buf = xmalloc((unsigned)total_bytes);
 #endif /* !TRE_USE_ALLOCA */
     if (buf == NULL)
       return REG_ESPACE;
-    memset(buf, 0, total_bytes);
+    memset(buf, 0, (size_t)total_bytes);
 
     /* Get the various pointers within tmp_buf (properly aligned). */
     tmp_tags = (void *)buf;
@@ -219,7 +206,7 @@ tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, int len,
       int first = tnfa->first_char;
 
       if (len >= 0)
-	str_byte = memchr(orig_str, first, len);
+	str_byte = memchr(orig_str, first, (size_t)len);
       else
 	str_byte = strchr(orig_str, first);
       if (str_byte == NULL)
@@ -282,7 +269,7 @@ tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, int len,
   DPRINT(("-------------+------------------------------------------------\n"));
 
   reach_next_i = reach_next;
-  while (1)
+  while (/*CONSTCOND*/1)
     {
       /* If no match found yet, add the initial states to `reach_next'. */
       if (match_eo < 0)
@@ -376,7 +363,6 @@ tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, int len,
 	  reach_next_i = reach_next;
 	  for (reach_i = reach; reach_i->state; reach_i++)
 	    {
-	      int i;
 	      int skip = 0;
 	      for (i = 0; tnfa->minimal_tags[i] >= 0; i += 2)
 		{
@@ -400,7 +386,6 @@ tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, int len,
 		}
 	      if (!skip)
 		{
-		  int *tmp_iptr;
 		  reach_next_i->state = reach_i->state;
 		  tmp_iptr = reach_next_i->tags;
 		  reach_next_i->tags = reach_i->tags;
@@ -425,26 +410,12 @@ tre_tnfa_run_parallel(const tre_tnfa_t *tnfa, const void *string, int len,
 	  for (trans_i = reach_i->state; trans_i->state; trans_i++)
 	    {
 	      /* Does this transition match the input symbol? */
-	      if (trans_i->code_min <= prev_c &&
-		  trans_i->code_max >= prev_c)
+	      if (trans_i->code_min <= (tre_cint_t)prev_c &&
+		  trans_i->code_max >= (tre_cint_t)prev_c)
 		{
 		  if (trans_i->assertions
 		      && (CHECK_ASSERTIONS(trans_i->assertions)
-			  /* Handle character class transitions. */
-			  || ((trans_i->assertions & ASSERT_CHAR_CLASS)
-			      && !(tnfa->cflags & REG_ICASE)
-			      && !tre_isctype((tre_cint_t)prev_c,
-					      trans_i->u.class))
-			  || ((trans_i->assertions & ASSERT_CHAR_CLASS)
-			      && (tnfa->cflags & REG_ICASE)
-			      && (!tre_isctype(tre_tolower((tre_cint_t)prev_c),
-					       trans_i->u.class)
-				  && !tre_isctype(tre_toupper((tre_cint_t)prev_c),
-						  trans_i->u.class)))
-			  || ((trans_i->assertions & ASSERT_CHAR_CLASS_NEG)
-			      && tre_neg_char_classes_match(trans_i->neg_classes,
-							    (tre_cint_t)prev_c,
-							    tnfa->cflags & REG_ICASE))))
+			  || CHECK_CHAR_CLASSES(trans_i, tnfa, eflags)))
 		    {
 		      DPRINT(("assertion failed\n"));
 		      continue;

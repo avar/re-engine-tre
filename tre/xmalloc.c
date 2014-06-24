@@ -1,21 +1,8 @@
 /*
   xmalloc.c - Simple malloc debugging library implementation
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -32,6 +19,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdio.h>
+#define XMALLOC_INTERNAL 1
+#include "xmalloc.h"
 
 
 /*
@@ -91,9 +80,9 @@ hash_void_ptr(void *ptr)
   /* I took this hash function just off the top of my head, I have
      no idea whether it is bad or very bad. */
   hash = 0;
-  for (i = 0; i < sizeof(ptr)*8 / TABLE_BITS; i++)
+  for (i = 0; i < (int)sizeof(ptr)*8 / TABLE_BITS; i++)
     {
-      hash ^= (long)ptr >> i*8;
+      hash ^= (unsigned long)ptr >> i*8;
       hash += i * 17;
       hash &= TABLE_MASK;
     }
@@ -275,7 +264,7 @@ xmalloc_impl(size_t size, const char *file, int line, const char *func)
 
   ptr = malloc(size);
   if (ptr != NULL)
-    hash_table_add(xmalloc_table, ptr, size, file, line, func);
+    hash_table_add(xmalloc_table, ptr, (int)size, file, line, func);
   return ptr;
 }
 
@@ -307,13 +296,16 @@ xcalloc_impl(size_t nmemb, size_t size, const char *file, int line,
 
   ptr = calloc(nmemb, size);
   if (ptr != NULL)
-    hash_table_add(xmalloc_table, ptr, nmemb * size, file, line, func);
+    hash_table_add(xmalloc_table, ptr, (int)(nmemb * size), file, line, func);
   return ptr;
 }
 
 void
 xfree_impl(void *ptr, const char *file, int line, const char *func)
 {
+  /*LINTED*/(void)&file;
+  /*LINTED*/(void)&line;
+  /*LINTED*/(void)&func;
   xmalloc_init();
 
   if (ptr != NULL)
@@ -349,7 +341,7 @@ xrealloc_impl(void *ptr, size_t new_size, const char *file, int line,
   if (new_ptr != NULL)
     {
       hash_table_del(xmalloc_table, ptr);
-      hash_table_add(xmalloc_table, new_ptr, new_size, file, line, func);
+      hash_table_add(xmalloc_table, new_ptr, (int)new_size, file, line, func);
     }
   return new_ptr;
 }

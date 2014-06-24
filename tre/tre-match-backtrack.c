@@ -1,21 +1,8 @@
 /*
   tre-match-backtrack.c - TRE backtracking regex matching engine
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -83,7 +70,7 @@ char *alloca ();
 #include "tre-internal.h"
 #include "tre-mem.h"
 #include "tre-match-utils.h"
-#include "regex.h"
+#include "tre.h"
 #include "xmalloc.h"
 
 typedef struct {
@@ -107,11 +94,11 @@ typedef struct tre_backtrack_struct {
   struct tre_backtrack_struct *next;
 } *tre_backtrack_t;
 
-#ifdef TRE_WHAR
-#define BT_STACK_WIDE_IN     stack->item.str_wide = (_str_wide)
-#define BT_STACK_WIDE_OUT    (_str_wide) = stack->item.str_wide
+#ifdef TRE_WCHAR
+#define BT_STACK_WIDE_IN(_str_wide)	stack->item.str_wide = (_str_wide)
+#define BT_STACK_WIDE_OUT		(str_wide) = stack->item.str_wide
 #else /* !TRE_WCHAR */
-#define BT_STACK_WIDE_IN
+#define BT_STACK_WIDE_IN(_str_wide)
 #define BT_STACK_WIDE_OUT
 #endif /* !TRE_WCHAR */
 
@@ -176,7 +163,7 @@ typedef struct tre_backtrack_struct {
 	stack = stack->next;						      \
       stack->item.pos = (_pos);						      \
       stack->item.str_byte = (_str_byte);				      \
-      BT_STACK_WIDE_IN;							      \
+      BT_STACK_WIDE_IN(_str_wide);					      \
       stack->item.state = (_state);					      \
       stack->item.state_id = (_state_id);				      \
       stack->item.next_c = (_next_c);					      \
@@ -184,7 +171,7 @@ typedef struct tre_backtrack_struct {
 	stack->item.tags[i] = (_tags)[i];				      \
       BT_STACK_MBSTATE_IN;						      \
     }									      \
-  while (0)
+  while (/*CONSTCOND*/0)
 
 #define BT_STACK_POP()							      \
   do									      \
@@ -192,6 +179,8 @@ typedef struct tre_backtrack_struct {
       int i;								      \
       assert(stack->prev);						      \
       pos = stack->item.pos;						      \
+      if (type == STR_USER)                                                   \
+        str_source->rewind(pos + pos_add_next, str_source->context);          \
       str_byte = stack->item.str_byte;					      \
       BT_STACK_WIDE_OUT;						      \
       state = stack->item.state;					      \
@@ -201,7 +190,7 @@ typedef struct tre_backtrack_struct {
       BT_STACK_MBSTATE_OUT;						      \
       stack = stack->prev;						      \
     }									      \
-  while (0)
+  while (/*CONSTCOND*/0)
 
 #undef MIN
 #define MIN(a, b) ((a) <= (b) ? (a) : (b))
@@ -239,9 +228,6 @@ tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
 #ifdef TRE_MBSTATE
   mbstate_t mbstate_start;
 #endif /* TRE_MBSTATE */
-
-  /* Compilation flags for this regexp. */
-  int cflags = tnfa->cflags;
 
   /* End offset of best match so far, or -1 if no match found yet. */
   int match_eo = -1;
@@ -384,9 +370,9 @@ tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
   if (state == NULL)
     goto backtrack;
 
-  while (1)
+  while (/*CONSTCOND*/1)
     {
-      tre_tnfa_transition_t *trans_i, *next_state;
+      tre_tnfa_transition_t *next_state;
       int empty_br_match;
 
       DPRINT(("start loop\n"));
@@ -438,7 +424,7 @@ tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
 	  DPRINT(("  should match back reference %d\n", bt));
 	  /* Get the substring we need to match against.  Remember to
 	     turn off REG_NOSUB temporarily. */
-	  tre_fill_pmatch(bt + 1, pmatch, tnfa->cflags & !REG_NOSUB,
+	  tre_fill_pmatch(bt + 1, pmatch, tnfa->cflags & /*LINTED*/!REG_NOSUB,
 			  tnfa, tags, pos);
 	  so = pmatch[bt].rm_so;
 	  eo = pmatch[bt].rm_eo;
@@ -473,21 +459,28 @@ tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
 	  if (len < 0)
 	    {
 	      if (type == STR_USER)
-		result = str_source->compare(so, pos, bt_len,
+		result = str_source->compare((unsigned)so, (unsigned)pos,
+					     (unsigned)bt_len,
 					     str_source->context);
 #ifdef TRE_WCHAR
 	      else if (type == STR_WIDE)
-		result = wcsncmp((wchar_t*)string + so, str_wide - 1, bt_len);
+		result = wcsncmp((const wchar_t*)string + so, str_wide - 1,
+				 (size_t)bt_len);
 #endif /* TRE_WCHAR */
 	      else
-		result = strncmp((char*)string + so, str_byte - 1, bt_len);
+		result = strncmp((const char*)string + so, str_byte - 1,
+				 (size_t)bt_len);
 	    }
 	  else if (len - pos < bt_len)
 	    result = 1;
+#ifdef TRE_WCHAR
+	  else if (type == STR_WIDE)
+	    result = wmemcmp((const wchar_t*)string + so, str_wide - 1,
+			     (size_t)bt_len);
+#endif /* TRE_WCHAR */
 	  else
-	    /* We can ignore multibyte characters here because the backref
-	       string is already aligned at character boundaries. */
-	    result = memcmp((char*)string + so, str_byte - 1, bt_len);
+	    result = memcmp((const char*)string + so, str_byte - 1,
+			    (size_t)bt_len);
 
 	  if (result == 0)
 	    {
@@ -506,6 +499,9 @@ tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
 		 and pos. */
 	      DPRINT(("	 back reference matched\n"));
 	      str_byte += bt_len - 1;
+#ifdef TRE_WCHAR
+	      str_wide += bt_len - 1;
+#endif /* TRE_WCHAR */
 	      pos += bt_len - 1;
 	      GET_NEXT_WCHAR();
 	      DPRINT(("	 pos now %d\n", pos));
@@ -546,24 +542,12 @@ tre_tnfa_run_backtrack(const tre_tnfa_t *tnfa, const void *string,
 		  trans_i->code_min, trans_i->code_max,
 		  trans_i->code_min, trans_i->code_max,
 		  trans_i->assertions, trans_i->state_id));
-	  if (trans_i->code_min <= prev_c && trans_i->code_max >= prev_c)
+	  if (trans_i->code_min <= (tre_cint_t)prev_c
+	      && trans_i->code_max >= (tre_cint_t)prev_c)
 	    {
 	      if (trans_i->assertions
 		  && (CHECK_ASSERTIONS(trans_i->assertions)
-		      /* Handle character class transitions. */
-		      || ((trans_i->assertions & ASSERT_CHAR_CLASS)
-			  && !(cflags & REG_ICASE)
-			  && !tre_isctype((tre_cint_t)prev_c, trans_i->u.class))
-		      || ((trans_i->assertions & ASSERT_CHAR_CLASS)
-			  && (cflags & REG_ICASE)
-			  && (!tre_isctype(tre_tolower((tre_cint_t)prev_c),
-					   trans_i->u.class)
-			      && !tre_isctype(tre_toupper((tre_cint_t)prev_c),
-					      trans_i->u.class)))
-		      || ((trans_i->assertions & ASSERT_CHAR_CLASS_NEG)
-			  && tre_neg_char_classes_match(trans_i->neg_classes,
-							(tre_cint_t)prev_c,
-							cflags & REG_ICASE))))
+		      || CHECK_CHAR_CLASSES(trans_i, tnfa, eflags)))
 		{
 		  DPRINT(("  assertion failed\n"));
 		  continue;

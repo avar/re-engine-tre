@@ -1,6 +1,8 @@
-*.bs
-*.o
+.build/*
+re-engine-TRE-*/*
+blib/*
+*.bak
+*.gz
 Makefile
-TRE.c
-blib
 pm_to_blib
+nytprof*

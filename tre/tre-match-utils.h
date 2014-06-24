@@ -1,25 +1,12 @@
 /*
   tre-match-utils.h - TRE matcher helper definitions
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
-#define str_source ((tre_str_source*)string)
+#define str_source ((const tre_str_source*)string)
 
 #ifdef TRE_WCHAR
 
@@ -66,7 +53,7 @@
 	      }								      \
 	    else							      \
 	      {								      \
-		w = tre_mbrtowc(&next_c, str_byte, max, &mbstate);	      \
+		w = tre_mbrtowc(&next_c, str_byte, (size_t)max, &mbstate);    \
 		if (w == (size_t)-1 || w == (size_t)-2)			      \
 		  return REG_NOMATCH;					      \
 		if (w == 0 && len >= 0)					      \
@@ -89,7 +76,7 @@
 	str_user_end = str_source->get_next_char(&next_c, &pos_add_next,      \
                                                  str_source->context);	      \
       }									      \
-  } while(0)
+  } while(/*CONSTCOND*/0)
 
 #else /* !TRE_MULTIBYTE */
 
@@ -120,7 +107,7 @@
 	str_user_end = str_source->get_next_char(&next_c, &pos_add_next,      \
                                                  str_source->context);	      \
       }									      \
-  } while(0)
+  } while(/*CONSTCOND*/0)
 
 #endif /* !TRE_MULTIBYTE */
 
@@ -145,7 +132,7 @@
 	str_user_end = str_source->get_next_char(&next_c, &pos_add_next,      \
 						 str_source->context);	      \
       }									      \
-  } while(0)
+  } while(/*CONSTCOND*/0)
 
 #endif /* !TRE_WCHAR */
 
@@ -161,7 +148,7 @@
        && (next_c != L'\0' || reg_noteol)				      \
        && (next_c != L'\n' || !reg_newline))				      \
    || ((assertions & ASSERT_AT_BOW)					      \
-       && (pos > 0 && (IS_WORD_CHAR(prev_c) || !IS_WORD_CHAR(next_c))))	      \
+       && (IS_WORD_CHAR(prev_c) || !IS_WORD_CHAR(next_c)))	              \
    || ((assertions & ASSERT_AT_EOW)					      \
        && (!IS_WORD_CHAR(prev_c) || IS_WORD_CHAR(next_c)))		      \
    || ((assertions & ASSERT_AT_WB)					      \
@@ -170,6 +157,19 @@
    || ((assertions & ASSERT_AT_WB_NEG)					      \
        && (pos == 0 || next_c == L'\0'					      \
 	   || IS_WORD_CHAR(prev_c) != IS_WORD_CHAR(next_c))))
+
+#define CHECK_CHAR_CLASSES(trans_i, tnfa, eflags)                             \
+  (((trans_i->assertions & ASSERT_CHAR_CLASS)                                 \
+       && !(tnfa->cflags & REG_ICASE)                                         \
+       && !tre_isctype((tre_cint_t)prev_c, trans_i->u.class))                 \
+    || ((trans_i->assertions & ASSERT_CHAR_CLASS)                             \
+        && (tnfa->cflags & REG_ICASE)                                         \
+        && !tre_isctype(tre_tolower((tre_cint_t)prev_c),trans_i->u.class)     \
+	&& !tre_isctype(tre_toupper((tre_cint_t)prev_c),trans_i->u.class))    \
+    || ((trans_i->assertions & ASSERT_CHAR_CLASS_NEG)                         \
+        && tre_neg_char_classes_match(trans_i->neg_classes,(tre_cint_t)prev_c,\
+                                      tnfa->cflags & REG_ICASE)))
+
 
 
 

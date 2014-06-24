@@ -1,21 +1,8 @@
 /*
   tre-internal.h - TRE internal definitions
 
-  Copyright (c) 2001-2006 Ville Laurikari <vl@iki.fi>.
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+  This software is released under a BSD-style license.
+  See the file LICENSE for details and copyright.
 
 */
 
@@ -31,13 +18,13 @@
 #endif /* !HAVE_WCTYPE_H */
 
 #include <ctype.h>
-#include "regex.h"
+#include "tre.h"
 
 #ifdef TRE_DEBUG
 #include <stdio.h>
-#define DPRINT(msg) do {printf msg; fflush(stdout);} while(0)
+#define DPRINT(msg) do {printf msg; fflush(stdout);} while(/*CONSTCOND*/0)
 #else /* !TRE_DEBUG */
-#define DPRINT(msg) do { } while(0)
+#define DPRINT(msg) do { } while(/*CONSTCOND*/0)
 #endif /* !TRE_DEBUG */
 
 #define elementsof(x)	( sizeof(x) / sizeof(x[0]) )
